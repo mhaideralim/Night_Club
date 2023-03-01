@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from v1_app.router import authentication_router, booking_router, event_router, admin_evet_router, profile_router
+from v1_app.api.router import authentication_router, booking_router, event_router, admin_evet_router, profile_router
 
 app = FastAPI()
 
