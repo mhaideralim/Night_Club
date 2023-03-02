@@ -18,7 +18,6 @@ from fastapi.templating import Jinja2Templates
 
 import os
 
-
 router = APIRouter()
 
 templates = Jinja2Templates(directory="v1_app/api/templete")
@@ -65,7 +64,13 @@ async def register(user: User, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "Email Already Registered!",
-                "data": {}
+                "data": {
+                    "validate_errors": [
+                        {
+                            "message": "Login by This Email or Register by a new Email"
+                        }
+                    ]
+                }
             }
             return response
         # Code to encrypt password
@@ -75,7 +80,9 @@ async def register(user: User, db=Depends(get_database)):
         response = {
             "code": 1,
             "message": "Registration Successfull!",
-            "data": {}
+            "data": {
+                "user": user
+            }
         }
         return response
     except Exception as e:
@@ -106,19 +113,43 @@ async def login(email: str, password: str, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "Invalid Email or Password!",
-                "data": {}
+                "data": {
+                    "validate error": [
+                        {
+                            "message": "Email is Incorrect!"
+                        },
+                        {
+                            "message": "Password in Incorrect!"
+                        }
+                    ]
+                }
             }
             return response
         if not user['is_verified']:
             response = {
                 "code": 0,
                 "message": "Email not verified!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Verify your email to Login!"
+                        }
+                    ]
+                }
             }
             return response
         # Function called here to generate and return access token
         access_token = await create_access_token(data={"sub": email})
-        return {"access_token": access_token, "token_type": "bearer"}
+        response = {
+            "code": 1,
+            "message": "Access Token generated",
+            "data":
+                {
+                    "access_token": access_token,
+                    "token_type": "bearer"
+                }
+        }
+        return response
     except Exception as e:
         response = {
             "code": 500,
@@ -146,7 +177,13 @@ async def verify_email(data: VerifyEmail, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "Invalid Email!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Email is not Correct"
+                        }
+                    ]
+                }
             }
             return response
         # Code to check whether email is verified or not
@@ -154,7 +191,9 @@ async def verify_email(data: VerifyEmail, db=Depends(get_database)):
             response = {
                 "code": 1,
                 "message": "Email Already verified!",
-                "data": {}
+                "data": {
+                    "email": data
+                }
             }
             return response
         # Function called here to generate OPT and to send it in the database if user email is correct
@@ -162,13 +201,16 @@ async def verify_email(data: VerifyEmail, db=Depends(get_database)):
         user['otp'] = otp
         user['otp_created_at'] = datetime.now()
         # Query to update otp in database
-        await db.users.update_one({'_id': ObjectId(user['_id'])},
+        users = await db.users.update_one({'_id': ObjectId(user['_id'])},
                                   {'$set': {'otp': otp, 'otp_created_at': user['otp_created_at']}})
         # Send email with OTP to the user
         response = {
             "code": 1,
             "message": "OTP Sent!",
-            "data": {}
+            "data": {
+
+                "data": users
+            }
         }
         return response
     except Exception as e:
@@ -197,7 +239,13 @@ async def send_mail(email: str, request: Request, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "User Not Found!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Email not Found"
+                        }
+                    ]
+                }
             }
             return response
         receiver_email = user["email"]
@@ -219,13 +267,17 @@ async def send_mail(email: str, request: Request, db=Depends(get_database)):
             server.starttls()
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, receiver_email, message.as_string())
-        await db.users.update_one({'_id': ObjectId(user['_id'])},
+        users = await db.users.update_one({'_id': ObjectId(user['_id'])},
                                   {'$set': {'otp': otp, 'otp_created_at': datetime.now()}})
 
         response = {
-            "code": 0,
+            "code": 1,
             "message": "Email with OTP Sent Successfully!",
-            "data": {}
+            "data": {
+                "email": email,
+                "otp": otp,
+                "data": users
+            }
         }
         return response
 
@@ -255,7 +307,13 @@ async def verify_otp(data: VerifyOTP, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "Invalid Email!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Email Not Correct"
+                        }
+                    ]
+                }
             }
             return response
         # Code to check whether OTP created or not
@@ -263,7 +321,13 @@ async def verify_otp(data: VerifyOTP, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "OTP Not Generated!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Due to invalid Email OTP is not generated"
+                        }
+                    ]
+                }
             }
             return response
         # Code to set OTP expiration time
@@ -272,7 +336,14 @@ async def verify_otp(data: VerifyOTP, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "OTP Expired!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "You are late OTP time is passed"
+                        }
+                    ]
+
+                }
             }
             return response
         # Code to check whether otp is correct or not
@@ -282,17 +353,27 @@ async def verify_otp(data: VerifyOTP, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "Invalid OTP!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "OTP is fake or Incorrect!"
+                        }
+                    ]
+                }
             }
             return response
         # Function called here to check if otp is correct then generate the access token
         access_token = await create_access_token(data={"sub": data.email})
         # Code to update the status of verified from false to true
-        await db.users.update_one({'_id': ObjectId(user['_id'])}, {'$set': {'is_verified': True}})
+        udata = await db.users.update_one({'_id': ObjectId(user['_id'])}, {'$set': {'is_verified': True}})
         response = {
-            "code": 0,
+            "code": 1,
             "message": "token_type: bearer",
-            "data": {"access_token": access_token}
+            "data": {
+                "token_type": "bearer",
+                "access_token": access_token,
+                "data": udata
+                }
         }
         return response
     except Exception as e:
@@ -320,8 +401,14 @@ async def send_forgot_mail(email: str, request: Request, db=Depends(get_database
         if not user:
             response = {
                 "code": 0,
-                "message": "Email Does nOt Exists!",
-                "data": {}
+                "message": "Email Does not Exists!",
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Invalid or Incorrect Email!"
+                        }
+                    ]
+                }
             }
             return response
         receiver_email = user["email"]
@@ -343,13 +430,17 @@ async def send_forgot_mail(email: str, request: Request, db=Depends(get_database
             server.starttls()
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, receiver_email, message.as_string())
-        await db.users.update_one({'_id': ObjectId(user['_id'])},
+        udata = await db.users.update_one({'_id': ObjectId(user['_id'])},
                                   {'$set': {'otp': otp, 'otp_created_at': datetime.now()}})
 
         response = {
             "code": 1,
             "message": "Email with OTP Sent Successfully",
-            "data": {}
+            "data": {
+                "email": email,
+                "otp": otp,
+                "data": udata
+            }
         }
         return response
     except Exception as e:
@@ -377,7 +468,13 @@ async def verify__forgot_otp(data: VerifyForgotOTP, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "OTP Not Generated!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "OTP creation time is valid or not "
+                        }
+                    ]
+                }
             }
             return response
         # Code to set OTP expiration time
@@ -386,7 +483,13 @@ async def verify__forgot_otp(data: VerifyForgotOTP, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "OTP Expired!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "You are late or OTP time is passed"
+                        }
+                    ]
+                }
             }
             return response
         # Code to check whether otp is correct or not
@@ -396,7 +499,13 @@ async def verify__forgot_otp(data: VerifyForgotOTP, db=Depends(get_database)):
             response = {
                 "code": 0,
                 "message": "invalid OTP!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Incorrect or Fake OTP"
+                        }
+                    ]
+                }
             }
             return response
         # Function called here to check if otp is correct then generate the access token
@@ -405,7 +514,9 @@ async def verify__forgot_otp(data: VerifyForgotOTP, db=Depends(get_database)):
             response = {
                 "code": 1,
                 "message": "Password Updated Successfully!",
-                "data": {}
+                "data": {
+                    "data": data
+                }
             }
             return response
         # Code to update the status of verified from false to true
