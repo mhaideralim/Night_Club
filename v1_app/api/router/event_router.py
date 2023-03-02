@@ -9,13 +9,20 @@ router = APIRouter()
 
 @router.get("/show-event")
 async def show_event_data(event: EventData, user_id: str, db=Depends(get_database)):
+    """
+    :param event:
+    :param user_id:
+    :param db:
+    :return:
+    """
     try:
-        data = await db.eventdata.find_one({"user_id": user_id})
+        data = await db.users.find_one({"user_id": user_id})
         if data:
             response = {
                 "code": 1,
                 "message": "Success",
                 "data": {
+                    "user_id": user_id,
                     "event": event
                 }
             }
@@ -24,7 +31,13 @@ async def show_event_data(event: EventData, user_id: str, db=Depends(get_databas
             response = {
                 "code": 0,
                 "message": "Invalid User",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Signup to Get Event updates"
+                        }
+                    ]
+                }
             }
             return response
     except Exception as e:
@@ -40,14 +53,21 @@ async def show_event_data(event: EventData, user_id: str, db=Depends(get_databas
 
 @router.post("/book-event-ticket")
 async def book_event_ticket(members_joining: list, user_id: str, db=Depends(get_database)):
+    """
+    :param members_joining:
+    :param user_id:
+    :param db:
+    :return:
+    """
     try:
-        data = await db.eventdata.find_one({"user_id": user_id})
+        data = await db.users.find_one({"user_id": user_id})
         if data:
             await db.eventdata.append({"members_joining": members_joining})
             response = {
                 "code": 1,
-                "message": "Success",
+                "message": "Successfully joined as a member",
                 "data": {
+                    "user_id": user_id,
                     "members_joining": members_joining
                 }
             }
@@ -56,7 +76,14 @@ async def book_event_ticket(members_joining: list, user_id: str, db=Depends(get_
             response = {
                 "code": 0,
                 "message": "Invalid User",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Signup to get access to events booking"
+                        }
+
+                    ]
+                }
             }
             return response
     except Exception as e:

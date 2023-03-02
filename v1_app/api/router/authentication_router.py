@@ -16,6 +16,9 @@ import random
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
+import os
+
+
 router = APIRouter()
 
 templates = Jinja2Templates(directory="v1_app/api/templete")
@@ -23,11 +26,20 @@ templates = Jinja2Templates(directory="v1_app/api/templete")
 
 # Function to generate 6-Digit OPT
 async def generate_otp():
+    """
+    :return:
+    """
     return ''.join(random.choices(string.digits, k=6))
 
 
 # Function to generate Access Token with expiry limit
 async def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """
+
+    :param data:
+    :param expires_delta:
+    :return:
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -41,6 +53,11 @@ async def create_access_token(data: dict, expires_delta: Optional[timedelta] = N
 # API to register a user in database
 @router.post('/register')
 async def register(user: User, db=Depends(get_database)):
+    """
+    :param user:
+    :param db:
+    :return:
+    """
     try:
         # Query to check if email already exists in database
         existing_user = await db.users.find_one({'email': user.email})
@@ -75,6 +92,12 @@ async def register(user: User, db=Depends(get_database)):
 # API for User Login
 @router.post('/login')
 async def login(email: str, password: str, db=Depends(get_database)):
+    """
+    :param email:
+    :param password:
+    :param db:
+    :return:
+    """
     try:
         # Query to find the user from database
         user = await db.users.find_one({'email': email})
@@ -110,6 +133,11 @@ async def login(email: str, password: str, db=Depends(get_database)):
 # API to verify user Email.
 @router.post('/verify_email')
 async def verify_email(data: VerifyEmail, db=Depends(get_database)):
+    """
+    :param data:
+    :param db:
+    :return:
+    """
     try:
         # Query to find Email from the database
         user = await db.users.find_one({'email': data.email})
@@ -156,6 +184,12 @@ async def verify_email(data: VerifyEmail, db=Depends(get_database)):
 
 @router.post("/send_email")
 async def send_mail(email: str, request: Request, db=Depends(get_database)):
+    """
+    :param email:
+    :param request:
+    :param db:
+    :return:
+    """
     try:
         # Retrieve the user's email address
         user = await db.users.find_one({"email": email})
@@ -209,6 +243,11 @@ async def send_mail(email: str, request: Request, db=Depends(get_database)):
 # API to verify OTP from database and generate token
 @router.post('/verify_otp')
 async def verify_otp(data: VerifyOTP, db=Depends(get_database)):
+    """
+    :param data:
+    :param db:
+    :return:
+    """
     try:
         # Query to find email from the database
         user = await db.users.find_one({"email": data.email})
@@ -269,6 +308,12 @@ async def verify_otp(data: VerifyOTP, db=Depends(get_database)):
 
 @router.post("/send_forgot_email")
 async def send_forgot_mail(email: str, request: Request, db=Depends(get_database)):
+    """
+    :param email:
+    :param request:
+    :param db:
+    :return:
+    """
     try:
         # Retrieve the user's email address
         user = await db.users.find_one({"email": email})
@@ -320,6 +365,11 @@ async def send_forgot_mail(email: str, request: Request, db=Depends(get_database
 
 @router.post('/verify_forgot_otp')
 async def verify__forgot_otp(data: VerifyForgotOTP, db=Depends(get_database)):
+    """
+    :param data:
+    :param db:
+    :return:
+    """
     try:
         user = await db.users.find_one({"otp": data.otp})
         # Code to check whether OTP created or not

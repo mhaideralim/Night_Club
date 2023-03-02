@@ -9,6 +9,12 @@ router = APIRouter()
 
 @router.post("/save-event-data")
 async def save_event_data(event: EventData, admin_id: int, db=Depends(get_database)):
+    """
+    :param event:
+    :param admin_id:
+    :param db:
+    :return:
+    """
     try:
         data = await db.users.find_one({"admin_id": admin_id})
         if data:

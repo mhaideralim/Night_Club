@@ -9,6 +9,12 @@ router = APIRouter()
 
 @router.post("/set-profile-data")
 async def set_profile_data(user: UserProfile, user_id: int, db=Depends(get_database)):
+    """
+    :param user:
+    :param user_id:
+    :param db:
+    :return:
+    """
     try:
         data = await db.users.find_one({"user_id": user_id})
         print(data)
@@ -17,14 +23,23 @@ async def set_profile_data(user: UserProfile, user_id: int, db=Depends(get_datab
             response = {
                 "code": 1,
                 "message": "Data Stored Successfully",
-                "data": {}
+                "data": {
+                    "user_id": user_id,
+                    "user_profile": user.dict()
+                }
             }
             return response
         else:
             response = {
                 "code": 0,
                 "message": "No Such user Exists!",
-                "data": {}
+                "data": {
+                    "validate_error": [
+                        {
+                            "message": "Please Login to Build Profile"
+                        }
+                    ]
+                }
             }
             return response
     except Exception as e:
